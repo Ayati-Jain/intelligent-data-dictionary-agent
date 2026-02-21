@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Intelligent Data Dictionary Agent</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background-color: #f4f6f9;
+        }
+
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 20px;
+        }
+
+        .container {
+            display: flex;
+            min-height: 70vh;
+        }
+
+        .sidebar {
+            width: 25%;
+            background-color: white;
+            padding: 15px;
+            border-right: 1px solid #ddd;
+        }
+
+        .main {
+            width: 75%;
+            padding: 20px;
+        }
+
+        .box {
+            background: white;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            box-shadow: 0px 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .chat {
+            background-color: white;
+            padding: 15px;
+            border-top: 1px solid #ddd;
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            padding: 8px 12px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        .table-option {
+            margin-bottom: 10px;
+        }
+
+        .upload-section {
+            margin-bottom: 20px;
+        }
+
+        .file-name {
+            font-size: 12px;
+            color: #555;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    Intelligent Data Dictionary Agent - Dashboard
+</header>
+
+<div class="container">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+
+        <!-- File Upload -->
+        <div class="upload-section">
+            <h3>Upload Dataset</h3>
+            <input type="file" id="fileInput" onchange="showFileName()">
+            <div id="selectedFile" class="file-name">No file selected</div>
+        </div>
+
+        <hr>
+
+        <h3>Select Table</h3>
+
+        <div class="table-option">
+            <input type="radio" name="table" onclick="showTable('orders')" checked>
+            <label>Orders</label>
+        </div>
+
+        <div class="table-option">
+            <input type="radio" name="table" onclick="showTable('returns')">
+            <label>Returns</label>
+        </div>
+
+        <div class="table-option">
+            <input type="radio" name="table" onclick="showTable('users')">
+            <label>Users</label>
+        </div>
+    </div>
+
+    <!-- Main Panel -->
+    <div class="main">
+
+        <div id="orders" class="box">
+            <h3>Table Details - Orders</h3>
+            <p><strong>Primary Key:</strong> Order ID</p>
+            <p><strong>Columns:</strong> Order ID, Order Date, Ship Date, Sales, Profit, Quantity, Customer Name, Region</p>
+            <p>This table contains transaction-level sales data including customer, product, and financial metrics.</p>
+        </div>
+
+        <div id="returns" class="box" style="display:none;">
+            <h3>Table Details - Returns</h3>
+            <p><strong>Primary Key:</strong> Order ID</p>
+            <p><strong>Columns:</strong> Order ID, Returned</p>
+            <p>This table records whether specific orders were returned.</p>
+        </div>
+
+        <div id="users" class="box" style="display:none;">
+            <h3>Table Details - Users</h3>
+            <p><strong>Primary Key:</strong> Region</p>
+            <p><strong>Columns:</strong> Region, Manager</p>
+            <p>This table maps regions to responsible managers.</p>
+        </div>
+
+        <div class="box">
+            <h3>AI-Generated Insight</h3>
+            <p>The selected dataset is analyzed and converted into business-level insights to help stakeholders understand structure and relationships.</p>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- Chat Section -->
+<div class="chat">
+    <input type="text" placeholder="Ask about your database...">
+    <button>📨 Send</button>
+</div>
+
+<script>
+function showTable(tableId) {
+    document.getElementById("orders").style.display = "none";
+    document.getElementById("returns").style.display = "none";
+    document.getElementById("users").style.display = "none";
+
+    document.getElementById(tableId).style.display = "block";
+}
+
+function showFileName() {
+    var input = document.getElementById("fileInput");
+    var fileName = input.files.length > 0 ? input.files[0].name : "No file selected";
+    document.getElementById("selectedFile").innerText = fileName;
+}
+</script>
+
+</body>
+</html>
