@@ -58,10 +58,10 @@ def table_details(table_name):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute(f"PRAGMA table_info({table_name})")
+    cursor.execute(f"PRAGMA table_info([{table_name}])")
     columns = [row[1] for row in cursor.fetchall()]
 
-    cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
+    cursor.execute(f"SELECT COUNT(*) FROM [{table_name}]")
     count = cursor.fetchone()[0]
 
     conn.close()
@@ -76,9 +76,33 @@ def table_details(table_name):
 @app.route("/connect_sql", methods=["POST"])
 def connect_sql():
     db_name = request.json.get("database")
+
+    if not db_name.endswith(".db"):
+        db_name += ".db"
+
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    db_path = os.path.join(BASE_DIR, db_name)
+
+    if not os.path.exists(db_path):
+        return jsonify({"message": "Database not found.", "tables": []})
+
     global DATABASE
-    DATABASE = db_name
-    return jsonify({"message": f"Connected to {db_name}"})
+    DATABASE = db_path
+
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT name FROM sqlite_master 
+        WHERE type='table' AND name NOT LIKE 'sqlite_%';
+    """)
+    tables = [row[0] for row in cursor.fetchall()]
+    conn.close()
+
+    return jsonify({
+        "message": f"Connected to {db_name}",
+        "tables": tables
+    })
 # -------------------------
 # ASK QUESTION
 # -------------------------
@@ -112,20 +136,60 @@ def ask():
             answer = f"{table} contains {count} rows."
 
         elif any(k in question for k in ["average", "avg", "max", "min", "sum", "total"]):
-            if target_column:
-                func = "AVG" if any(k in question for k in ["average", "avg"]) else \
-                       "MAX" if "max" in question else \
-                       "MIN" if "min" in question else "SUM"
+
+            if not target_column:
+              return jsonify({"answer": "Please mention a valid column name."})
+
+    # Detect aggregation function
+            if any(k in question for k in ["average", "avg"]):
+              func = "AVG"
+            elif "max" in question:
+              func = "MAX"
+            elif "min" in question:
+             func = "MIN"
+            else:
+             func = "SUM"
+
+    # Ensure column is numeric
+            cursor.execute(f"""
+              SELECT [{target_column}] 
+              FROM [{table}] 
+              WHERE [{target_column}] IS NOT NULL 
+              LIMIT 5
+            """)
+            sample = cursor.fetchall()
+
+            try:
+             float(sample[0][0])
+            except:
+             return jsonify({"answer": f"{target_column} is not numeric."})
+
+            cursor.execute(f"SELECT {func}([{target_column}]) FROM [{table}]")
+            res = cursor.fetchone()[0]
+
+            answer = f"{func.capitalize()} of {target_column} is {round(res or 0,2)}"
                 
-                cursor.execute(f"SELECT {func}([{target_column}]) FROM [{table}]")
-                res = cursor.fetchone()[0]
-                answer = f"{func.capitalize()} of {target_column} is {round(res or 0, 2)}"
+            # --- PIE CHART GENERATION LOGIC ---
+            preferred_categories = ["Region", "Category", "Customer Segment", "Ship Mode"]
+
+            category_col = None
+            for col in column_names:
+             if col in preferred_categories:
+                category_col = col
+                break
+
+            if not category_col:
+                # fallback to first non-numeric column
+              for col in column_names:
+                 cursor.execute(f"SELECT [{col}] FROM [{table}] LIMIT 5")
+                 sample = cursor.fetchall()
+                 try:
+                    float(sample[0][0])
+                 except:
+                    category_col = col
+                    break
                 
-                # --- PIE CHART GENERATION LOGIC ---
-                text_cols = [c[1] for c in columns_info if "text" in c[2].lower() or "varchar" in c[2].lower()]
-                category_col = text_cols[0] if text_cols else None
-                
-                if category_col:
+            if category_col:
                     query = f"SELECT [{category_col}], {func}([{target_column}]) as val FROM [{table}] GROUP BY [{category_col}] ORDER BY val DESC LIMIT 10"
                     df_chart = pd.read_sql_query(query, conn)
                     
@@ -137,8 +201,6 @@ def ask():
                         title=f"{func} {target_column} by {category_col}"
                     )
                     chart_json = pio.to_json(fig)
-            else:
-                answer = "Please specify a valid numeric column name."
 
         elif "show" in question:
             cursor.execute(f"SELECT * FROM [{table}] LIMIT 5")
@@ -150,7 +212,6 @@ def ask():
 
     conn.close()
     return jsonify({"answer": answer, "chart": chart_json})
-
 
 if __name__ == "__main__":
     app.run(debug=True)
