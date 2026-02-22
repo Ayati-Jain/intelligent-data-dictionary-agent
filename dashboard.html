@@ -49,7 +49,7 @@
             <input type="text" id="questionInput" placeholder="Ask about average, rows, max, min, total...">
             <button onclick="askQuestion()">Ask</button>
             <div id="answerBox" style="margin-top:15px;"></div>
-            <div id="chartContainer" style="margin-top:20px;"></div>
+            <div id="chartContainer" style="margin-top:20px; height:400px;"></div>
         </div>
     </div>
 </div>
@@ -78,6 +78,7 @@ function uploadFile(){
 
 function connectDB(){
     const dbName = document.getElementById("dbName").value
+
     fetch("/connect_sql", {
         method:"POST",
         headers:{ "Content-Type":"application/json"},
@@ -85,7 +86,19 @@ function connectDB(){
     })
     .then(res=>res.json())
     .then(data=>{
-        document.getElementById("dbStatus").innerHTML = "<span class='success'>"+data.message+"</span>"
+        document.getElementById("dbStatus").innerHTML =
+            "<span class='success'>"+data.message+"</span>"
+
+        // SHOW TABLES
+        let html=""
+        if(data.tables.length === 0){
+            html = "No tables found in database."
+        } else {
+            data.tables.forEach(t=>{
+                html += `<div><button onclick="selectTable('${t}')">${t}</button></div>`
+            })
+        }
+        document.getElementById("tableList").innerHTML = html
     })
 }
 
@@ -126,10 +139,6 @@ function askQuestion(){
         // Handle Chart Rendering
         if(data.chart) {
             const plotData = JSON.parse(data.chart);
-            // This force-changes the chart type to pie for the visual you requested
-            plotData.data[0].type = 'pie';
-            plotData.data[0].labels = plotData.data[0].x;
-            plotData.data[0].values = plotData.data[0].y;
             Plotly.newPlot('chartContainer', plotData.data, plotData.layout);
         }
     })
